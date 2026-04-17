@@ -32,7 +32,7 @@ Each skill manifest should define:
 
 ## Skill Inventory
 
-Current packaged count: **59** skill files under `skills/**/*.json`.
+Current packaged count: **65** skill files under `skills/**/*.json`.
 
 ## Design Principles
 

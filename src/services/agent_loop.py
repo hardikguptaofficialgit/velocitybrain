@@ -83,6 +83,7 @@ class AgentLoop:
 
     def run(self, signal: str) -> dict:
         run_id = str(uuid.uuid4())
+        trace_id = str(uuid.uuid4())
         intent = self._detect_intent(signal)
         context = self.retrieval.hybrid_search(signal, limit=8)
         plan = self._plan(intent, signal, context)
@@ -108,6 +109,7 @@ class AgentLoop:
             'reasoning_summary': reasoning,
             'references': [{'type': 'entity', 'slug': x['slug']} for x in context],
             'timestamp': datetime.now(timezone.utc).isoformat(),
+            'trace_id': trace_id,
         }
         self._persist_run(output)
         return output

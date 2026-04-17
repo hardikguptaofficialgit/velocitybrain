@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -7,7 +8,13 @@ from src.api.routes import router
 from src.background.scheduler import start_scheduler
 from src.core.config import settings
 
-app = FastAPI(title=settings.app_name, version='1.0.0')
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    start_scheduler()
+    yield
+
+
+app = FastAPI(title=settings.app_name, version='1.0.0', lifespan=lifespan)
 app.include_router(router)
 
 DOCS_ROOT = Path('docs').resolve()
@@ -15,6 +22,7 @@ WEB_ROOT = Path('web').resolve()
 DOC_PAGES: list[tuple[str, str, str, Path]] = [
     ('overview', 'Overview', 'Getting Started', Path('README.md').resolve()),
     ('client-integrations', 'Client Integrations', 'Getting Started', (DOCS_ROOT / 'CLIENT_INTEGRATIONS.md').resolve()),
+    ('next-level', 'Next Level Roadmap', 'Getting Started', (DOCS_ROOT / 'NEXT_LEVEL.md').resolve()),
     ('architecture', 'Architecture', 'Core Concepts', (DOCS_ROOT / 'ARCHITECTURE.md').resolve()),
     ('db-schema', 'DB Schema', 'Core Concepts', (DOCS_ROOT / 'DB_SCHEMA.md').resolve()),
     ('skill-system', 'Skill System', 'Core Concepts', (DOCS_ROOT / 'SKILL_SYSTEM.md').resolve()),
@@ -34,13 +42,6 @@ if WEB_ROOT.exists():
 ASSETS_ROOT = Path('docs/assets').resolve()
 if ASSETS_ROOT.exists():
     app.mount('/guide/static/assets', StaticFiles(directory=str(ASSETS_ROOT)), name='docs-assets')
-
-
-@app.on_event('startup')
-def _startup():
-    start_scheduler()
-
-
 @app.get('/')
 def root():
     return {

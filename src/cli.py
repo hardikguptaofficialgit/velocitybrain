@@ -11,9 +11,12 @@ from src.core.db import bootstrap_schema
 from src.services.agent_loop import AgentLoop
 from src.services.identity_spec import IdentitySpecService
 from src.services.memory_engine import MemoryEngine
+from src.services.openclaw_profile import build_openclaw_profile
 from src.services.org_ingest import OrgIngestService
 from src.services.retrieval_engine import RetrievalEngine
+from src.services.runtime_status import build_runtime_status
 from src.services.skill_registry import SkillRegistry
+from src.services.skill_validation import validate_skill_inventory
 from src.services.sync_service import SyncService
 
 BRAND = 'Velocity Brain'
@@ -82,13 +85,14 @@ def _emit(args: argparse.Namespace, payload: dict[str, Any], renderer) -> None:
 def _render_banner(banner: str, color: bool) -> None:
     lines = banner.strip('\n').splitlines()
     velocity_split = 6
+    ascii_map = str.maketrans({'█': '#', '╗': '+', '╝': '+', '╚': '+', '╔': '+', '═': '-', '║': '|'})
     for i, line in enumerate(lines):
         if not line.strip():
             print('')
             continue
         
         if not color:
-            print(line)
+            print(line.translate(ascii_map))
             continue
         
         # Apply a multi-color 3D effect: Blocks get primary color, structural borders get white
@@ -129,10 +133,13 @@ def _render_init(payload: dict[str, Any]) -> None:
     _print_section(
         f'{BRAND} init',
         [
+            f"trace_id: {payload.get('trace_id', 'n/a')}",
             f"app: {payload['app']}",
             f"status: {payload['status']}",
             f"env: {payload['env']}",
             f"skills_loaded: {payload['skills_loaded']}",
+            f"skills_validated: {payload.get('skills_validated', 'n/a')}",
+            f"skills_invalid: {payload.get('skills_invalid', 'n/a')}",
             f"database_url: {payload['database_url']}",
             f"identity_source: {payload['identity_source']}",
             f"schema_bootstrap: {payload.get('schema_bootstrap', 'skipped')}",
@@ -146,6 +153,7 @@ def _render_ingest(payload: dict[str, Any]) -> None:
     _print_section(
         'ingested',
         [
+            f"trace_id: {payload.get('trace_id', 'n/a')}",
             f"slug: {payload.get('slug', 'n/a')}",
             f"title: {payload.get('title', payload.get('source', 'n/a'))}",
             f"type: {payload.get('type', 'batch')}",
@@ -162,6 +170,7 @@ def _render_query(payload: dict[str, Any]) -> None:
     _print_section(
         'query result',
         [
+            f"trace_id: {payload.get('trace_id', 'n/a')}",
             f"answer: {payload['answer']}",
             f"confidence: {payload['confidence']}",
             f"references: {len(refs)}",
@@ -176,6 +185,7 @@ def _render_run(payload: dict[str, Any]) -> None:
     _print_section(
         'agent run',
         [
+            f"trace_id: {payload.get('trace_id', 'n/a')}",
             f"run_id: {payload['run_id']}",
             f"status: {payload['status']}",
             f"intent: {payload['intent']}",
@@ -191,7 +201,7 @@ def _render_run(payload: dict[str, Any]) -> None:
 def _render_skills(payload: dict[str, Any]) -> None:
     use_color = payload.get('_color', False)
     skills = payload.get('skills', [])
-    _print_section('skills', [f"count: {payload.get('count', 0)}"], color=use_color)
+    _print_section('skills', [f"trace_id: {payload.get('trace_id', 'n/a')}", f"count: {payload.get('count', 0)}"], color=use_color)
     for skill in skills:
         print(_style(f"  - [{skill.get('category', 'uncategorized')}] {skill.get('name', 'unnamed-skill')}", SLATE, color=use_color))
 
@@ -199,7 +209,7 @@ def _render_skills(payload: dict[str, Any]) -> None:
 def _render_doctor(payload: dict[str, Any]) -> None:
     use_color = payload.get('_color', False)
     checks = payload.get('checks', {})
-    _print_section('doctor', [f"ok: {payload.get('ok', False)}"], color=use_color)
+    _print_section('doctor', [f"trace_id: {payload.get('trace_id', 'n/a')}", f"ok: {payload.get('ok', False)}"], color=use_color)
     for key in sorted(checks.keys()):
         mark = 'PASS' if checks[key] else 'FAIL'
         tone = ORANGE if checks[key] else BLUE
@@ -211,6 +221,7 @@ def _render_sync(payload: dict[str, Any]) -> None:
     _print_section(
         'sync',
         [
+            f"trace_id: {payload.get('trace_id', 'n/a')}",
             f"operation: {payload.get('operation')}",
             f"status: {payload.get('status')}",
             f"dry_run: {payload.get('dry_run')}",
@@ -227,6 +238,7 @@ def _render_identity(payload: dict[str, Any]) -> None:
     _print_section(
         'identity',
         [
+            f"trace_id: {payload.get('trace_id', 'n/a')}",
             f"name: {payload.get('name', 'n/a')}",
             f"version: {payload.get('version', 'n/a')}",
             f"source: {payload.get('source', 'n/a')}",
@@ -237,15 +249,72 @@ def _render_identity(payload: dict[str, Any]) -> None:
     )
 
 
+def _render_openclaw_profile(payload: dict[str, Any]) -> None:
+    use_color = payload.get('_color', False)
+    server = payload.get('server', {})
+    defaults = payload.get('defaults', {})
+    capabilities = payload.get('capabilities', {})
+    _print_section(
+        'openclaw profile',
+        [
+            f"name: {payload.get('name', 'n/a')}",
+            f"client: {payload.get('client', 'n/a')}",
+            f"server_command: {server.get('command', 'n/a')}",
+            f"server_args: {' '.join(server.get('args', []))}",
+            f"destructive_tools_allowed: {defaults.get('destructive_tools_allowed', False)}",
+            f"traceability: {defaults.get('traceability', True)}",
+            f"tool_count: {capabilities.get('tool_count', 0)}",
+            f"skill_count: {capabilities.get('skill_count', 0)}",
+        ],
+        color=use_color,
+    )
+    print(_style('  tools: ' + ', '.join(capabilities.get('tools', [])), SLATE, color=use_color))
+    print(_style('  smoke_flow: ' + ' -> '.join(payload.get('recommended_smoke_flow', [])), SLATE, color=use_color))
+
+
+def _render_status(payload: dict[str, Any]) -> None:
+    use_color = payload.get('_color', False)
+    skills = payload.get('skills', {})
+    openclaw = payload.get('openclaw', {})
+    audit = payload.get('audit', {})
+    latest = audit.get('latest_event') or {}
+    latest_label = 'none'
+    if latest:
+        latest_label = ' | '.join(str(part) for part in [latest.get('event_type'), latest.get('actor'), latest.get('created_at')] if part)
+
+    _print_section(
+        'runtime status',
+        [
+            f"trace_id: {payload.get('trace_id', 'n/a')}",
+            f"app: {payload.get('app', 'n/a')}",
+            f"env: {payload.get('env', 'n/a')}",
+            f"api_ok: {payload.get('health', {}).get('ok', False)}",
+            f"skills_count: {skills.get('count', 0)}",
+            f"skill_categories: {', '.join(skills.get('categories', []))}",
+            f"openclaw_tool_count: {openclaw.get('tool_count', 0)}",
+            f"openclaw_skill_count: {openclaw.get('skill_count', 0)}",
+            f"audit_available: {audit.get('available', False)}",
+            f"audit_recent_count: {audit.get('count', 0)}",
+            f"audit_latest: {latest_label}",
+            f"generated_at: {payload.get('generated_at', 'n/a')}",
+        ],
+        color=use_color,
+    )
+
+
 def _payload_init(bootstrap: bool = False) -> dict[str, Any]:
     skills = SkillRegistry(settings.skills_path).list_skills()
+    validation = validate_skill_inventory(skills)
     payload = {
         'app': settings.app_name,
         'status': 'initialized',
         'env': settings.env,
         'database_url': settings.database_url,
         'skills_loaded': len(skills),
+        'skills_validated': validation['valid_count'],
+        'skills_invalid': validation['invalid_count'],
         'identity_source': settings.identity_spec_path,
+        'trace_id': f'init-{len(skills)}-{settings.env}',
     }
     if bootstrap:
         try:
@@ -259,7 +328,7 @@ def cmd_about(args: argparse.Namespace) -> int:
     payload = {
         'app': settings.app_name,
         'mode': 'terminal-first',
-        'commands': ['about', 'init', 'ingest', 'query', 'run', 'skills', 'doctor', 'sync', 'identity', 'serve'],
+        'commands': ['about', 'init', 'ingest', 'query', 'run', 'skills', 'doctor', 'sync', 'identity', 'openclaw', 'status', 'serve'],
         'entrypoints': {'api': 'velocitybrain serve api', 'mcp': 'velocitybrain serve mcp'},
         'embedding': {
             'provider': settings.embedding_provider,
@@ -267,6 +336,7 @@ def cmd_about(args: argparse.Namespace) -> int:
             'dim': settings.embed_dim,
             'router': settings.model_router,
         },
+        'trace_id': 'about-runtime',
         '_color': _use_color(args),
     }
     _emit(args, payload, _render_about)
@@ -308,6 +378,7 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     else:
         content = _load_content(args.content, args.content_file)
         res = MemoryEngine().upsert_from_text(args.source, content, args.access_level)
+    res['trace_id'] = res.get('trace_id') or f'ingest-{args.source}'
     res['_color'] = _use_color(args)
     _emit(args, res, _render_ingest)
     return 0
@@ -333,6 +404,7 @@ def _query_payload(question: str, limit: int) -> dict[str, Any]:
             'confidence': 0.22,
             'references': [],
             'reasoning_summary': 'Brain-first lookup completed with zero hits. No hallucinated answer returned.',
+            'trace_id': f'query-{limit}',
         }
 
     top = hits[0]
@@ -341,6 +413,7 @@ def _query_payload(question: str, limit: int) -> dict[str, Any]:
         'confidence': float(top['confidence']),
         'references': [{'type': 'entity', 'slug': h['slug'], 'title': h['title']} for h in hits],
         'reasoning_summary': f'Hybrid retrieval returned {len(hits)} internal matches; top-ranked entity used for synthesis.',
+        'trace_id': f'query-{limit}-{len(hits)}',
     }
 
 
@@ -372,6 +445,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             ),
             'references': [],
             'error': 'runtime_unavailable',
+            'trace_id': f'run-failed-{args.signal[:20]}',
         }
     payload['_color'] = _use_color(args)
     _emit(args, payload, _render_run)
@@ -385,7 +459,7 @@ def cmd_skills(args: argparse.Namespace) -> int:
         filtered = [s for s in filtered if s.get('category') == args.category]
     if args.limit:
         filtered = filtered[: args.limit]
-    payload = {'count': len(filtered), 'skills': filtered, '_color': _use_color(args)}
+    payload = {'count': len(filtered), 'skills': filtered, 'trace_id': f'skills-{len(filtered)}', '_color': _use_color(args)}
     _emit(args, payload, _render_skills)
     return 0
 
@@ -405,7 +479,7 @@ def _doctor_payload() -> dict[str, Any]:
 
     checks['skills_path'] = SkillRegistry(settings.skills_path).skills_root.exists()
     checks['identity_spec'] = Path(settings.identity_spec_path).exists() or True
-    return {'ok': all(checks.values()), 'checks': checks}
+    return {'ok': all(checks.values()), 'checks': checks, 'trace_id': 'doctor-check'}
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -425,8 +499,25 @@ def cmd_sync(args: argparse.Namespace) -> int:
 
 def cmd_identity(args: argparse.Namespace) -> int:
     payload = IdentitySpecService().get()
+    payload['trace_id'] = payload.get('trace_id') or 'identity-spec'
     payload['_color'] = _use_color(args)
     _emit(args, payload, _render_identity)
+    return 0
+
+
+def cmd_openclaw(args: argparse.Namespace) -> int:
+    payload = build_openclaw_profile()
+    payload['trace_id'] = payload.get('trace_id') or 'openclaw-profile'
+    payload['_color'] = _use_color(args)
+    _emit(args, payload, _render_openclaw_profile)
+    return 0
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    payload = build_runtime_status(audit_limit=5)
+    payload['trace_id'] = payload.get('trace_id') or 'runtime-status'
+    payload['_color'] = _use_color(args)
+    _emit(args, payload, _render_status)
     return 0
 
 
@@ -465,6 +556,8 @@ def build_parser() -> argparse.ArgumentParser:
   velocitybrain run "Prepare me for meeting with Jane Doe tomorrow"
   velocitybrain sync --repo . --apply
   velocitybrain identity
+    velocitybrain openclaw
+    velocitybrain status
   velocitybrain serve api --host 0.0.0.0 --port 8080 --reload
   velocitybrain serve mcp
   velocitybrain --json query "What changed?"
@@ -522,6 +615,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_identity = sub.add_parser('identity', help='Show runtime identity specification.')
     p_identity.set_defaults(func=cmd_identity)
+
+    p_openclaw = sub.add_parser('openclaw', help='Show OpenClaw integration profile.')
+    p_openclaw.set_defaults(func=cmd_openclaw)
+
+    p_status = sub.add_parser('status', aliases=['runtime-status'], help='Show unified runtime status summary.')
+    p_status.set_defaults(func=cmd_status)
 
     p_serve = sub.add_parser('serve', help='Run API server or MCP server.')
     p_serve.add_argument('mode', nargs='?', choices=['api', 'mcp'], default='api')

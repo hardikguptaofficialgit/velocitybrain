@@ -52,6 +52,7 @@ class SyncService:
         return plan
 
     def full_sync(self, repos: list[str], dry_run: bool = True, include_org: bool = True) -> dict[str, Any]:
+        trace_id = f'sync-{datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")}-{len(repos)}'
         deduped = list(dict.fromkeys(repos))
         plan = self._plan(deduped, include_org=include_org)
         if dry_run:
@@ -62,6 +63,7 @@ class SyncService:
                 'status': 'planned',
                 'at': self._now(),
                 'plan': plan,
+                'trace_id': trace_id,
             }
 
         ingested_total = 0
@@ -90,6 +92,7 @@ class SyncService:
             'ingested_entities': ingested_total,
             'at': self._now(),
             'plan': plan,
+            'trace_id': trace_id,
         }
 
     def push(self, repos: list[str] | None = None, dry_run: bool = True) -> dict:

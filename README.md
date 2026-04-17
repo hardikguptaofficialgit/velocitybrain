@@ -1,5 +1,4 @@
-
-<p align="center">
+﻿<p align="center">
   <img src="/guide/static/assets/velocity-brain-logo.svg" alt="Velocity Brain logo" width="600" />
 </p>
 
@@ -7,15 +6,131 @@
   CLI-native. API-capable. MCP-ready.
 </p>
 
-## What Is Velocity Brain
+## Velocity Brain
 
-Velocity Brain is a local-first memory and execution runtime for agents. It stores memory in Postgres, retrieves internal context, and runs deterministic workflows.
+Your AI agent is capable but incomplete. Velocity Brain gives it a real brain.
+
+Velocity Brain is a local-first memory and execution runtime for agents. It stores memory in Postgres, retrieves internal context before action, and runs deterministic workflows through CLI, API, and MCP interfaces.
 
 Core value:
 - Brain-first retrieval before action
 - Persistent memory and timeline model
-- Agent-loop runtime for planning and execution
-- MCP tools for multiple MCP-compatible clients
+- JSON skillpack for planning, execution, enrichment, and maintenance
+- MCP tools for compatible clients
+- Policy gates and auditability for destructive actions
+
+## What Velocity Brain Does
+
+Velocity Brain detects signals, performs brain-first lookup, ingests content, enriches entities, manages tasks, schedules cron jobs, generates reports, and supports connector-backed automations.
+
+It ensures:
+
+* Memory is accessed before action
+* Information is structured and retrievable
+* Citations and compiled truth stay consistent
+* Tasks and automations run reliably
+* MCP clients can call the same runtime tools
+
+## Core System Capabilities
+
+**Signal Detection & Thought Capture**
+A lightweight intent layer routes requests into ingestion, query, planning, execution, or maintenance flows. The agent loop preserves the original signal, captures entities, and writes back useful memory.
+
+**Brain-First Lookup Protocol**
+All main workflows begin with internal retrieval. The runtime prefers existing knowledge before synthesis or execution, which keeps results consistent with prior memory.
+
+**Content & Media Ingestion**
+The shipped CLI supports inline text, files, and Org-mode ingestion. The skill library also includes manifests for article, PDF, video, audio, and OCR-style workflows.
+
+**Entity Enrichment**
+Entities are stored as structured pages with timeline evidence, compiled truth, and relationship data.
+
+**Task & Cron Management**
+The runtime includes deterministic job execution, background scheduler hooks, and job queue storage for repeatable operational workflows.
+
+**Connector-Backed Automations**
+Execution adapters cover email, calendar, messaging, and Google Workspace style actions. Destructive operations stay policy-gated.
+
+## Intelligence & Routing Layer
+
+**RESOLVER-style Skill Dispatch**
+Requests are matched to the right skill or workflow from the JSON skill registry. The router and agent loop use intent, keywords, and internal retrieval to decide what happens next.
+
+The current categories are:
+
+* Always-on
+* Brain operations
+* Ingestion
+* Thinking
+* Operational
+
+## Identity & System Configuration
+
+**Identity Spec Layer**
+`identity.spec.json` sits above the runtime defaults and describes the agent identity and policy posture.
+
+**Identity Outputs**
+The project supports identity and policy-oriented outputs through the existing identity spec service and access-control services.
+
+## Access Control
+
+Out-of-the-box access control includes:
+
+* Full
+* Work
+* Family
+* None
+
+Destructive MCP tools are policy-gated, and the runtime also supports signed access tokens and encrypted legacy-plan storage.
+
+## Operational Standards
+
+Velocity Brain applies a shared set of operational rules:
+
+* Brain-first lookup discipline
+* Citation and confidence requirements in query output
+* Deterministic action execution
+* Test-before-bulk safeguards for sync and mutation flows
+* Audit logging for high-risk events
+
+## Skill System
+
+Velocity Brain includes **65** JSON-defined skills, each with:
+
+* Metadata fields for name, version, category, and triggers
+* Defined workflow steps
+* Validation rules
+* Standardized output structure
+
+All skills are:
+
+* Loaded from `skills/**/*.json`
+* Available through the `skills` CLI and MCP toolset
+* Extensible without changing the router for every new capability
+
+## Conformance & Architecture
+
+* Skills follow a unified manifest shape
+* Legacy behavior is being consolidated into reusable skills
+* Ingestion, query, execution, and maintenance remain separated by workflow
+* The runtime is built to stay deterministic and auditable
+
+## Setup & Runtime
+
+* Fully working brain in about 30 minutes on a local machine
+* Database initialization is automated through the provided schema bootstrap
+* Minimal configuration is required beyond Postgres and environment variables
+* The system becomes operational immediately after setup checks pass
+
+## Outcome
+
+Velocity Brain turns an AI agent into a continuously improving system that:
+
+* Thinks before responding
+* Remembers context
+* Organizes knowledge automatically
+* Executes tasks reliably
+* Improves over time without supervision
 
 ## Install
 
@@ -90,6 +205,8 @@ velocitybrain run "..."
 velocitybrain sync --repo .
 velocitybrain sync --repo C:/repo-a --repo C:/repo-b --apply
 velocitybrain identity
+velocitybrain openclaw
+velocitybrain status
 velocitybrain serve api --host 0.0.0.0 --port 8080 --reload
 velocitybrain serve mcp
 ```
@@ -151,7 +268,7 @@ claude mcp add velocitybrain -- velocitybrain serve mcp
 codex mcp add velocitybrain -- velocitybrain serve mcp
 ```
 
-- Gemini CLI / Cline / Antigravity / any MCP-capable client:
+- OpenClaw / Gemini CLI / Cline / Antigravity / any MCP-capable client:
 Use the same `mcpServers` JSON config in that client's MCP settings.
 
 Available MCP tools:
@@ -178,26 +295,58 @@ Main endpoints:
 - Health: `GET /v1/healthz`
 - Docs: `http://localhost:8080/docs`
 - Guide app: `http://localhost:8080/guide`
-- Org ingest: `POST /v1/ingest/org`
-- Eval query: `POST /v1/eval/query`
-- Identity spec: `GET /v1/identity/spec`
-- Sync full: `POST /v1/sync/full`
-- Access token: `POST /v1/access/token`
-- Legacy plan: `POST /v1/legacy/plan`, `GET /v1/legacy/plan/{owner}`
 - Docs pages list: `GET /v1/docs/pages`
 - Docs page content: `GET /v1/docs/page/{slug}`
+- Retrieval eval: `POST /v1/eval/query`
+- Audit viewer: `GET /v1/audit/recent`
+- OpenClaw profile: `GET /v1/openclaw/profile`
+- OpenClaw capabilities: `GET /v1/openclaw/capabilities`
+- Runtime status: `GET /v1/runtime/status`
+
+OpenClaw profile export command:
+
+```powershell
+velocitybrain openclaw
+```
+
+Unified runtime status command:
+
+```powershell
+velocitybrain status
+```
+
+## Guide App
+
+The built-in guide at `http://localhost:8080/guide` now includes:
+
+- Live API status (`/v1/healthz`)
+- Docs page count (`/v1/docs/pages`)
+- OpenClaw capability summary (`/v1/openclaw/capabilities`)
+- Recent audit snapshot (`/v1/audit/recent`)
+
+The guide uses a flat, brand-aligned color language (solid panels with orange accent), with no glow or gradient-heavy treatment.
+
+## Retrieval Quality
+
+Velocity Brain now includes a retrieval evaluation harness for measuring precision@k, recall@k, groundedness, and hallucination risk.
+
+- API endpoint: `POST /v1/eval/query`
+- Benchmark dataset: `data/retrieval_benchmark.json`
+- Benchmark runner: `scripts/retrieval_benchmark.py`
 
 ## Security and Reliability Improvements
 
 - Runtime identity spec layer (`identity.spec.json`) above `AGENTS.md`
 - Workspace-bounded file reads for ingestion by default
 - Policy enforcement for destructive MCP tools
+- Audit trail for destructive MCP approvals and denials
+- FastAPI lifespan startup handler (no deprecation warning)
 - Sync dry-run is non-mutating and supports multiple repositories
 - Configurable embedding provider/model/dimension/router
 - DB connect/lock/statement timeout controls
 - Org-mode ingestion support and sync discovery
 - Evaluation metrics endpoint (`precision@k`, `recall@k`, latency)
-- Encrypted digital-legacy storage and token-based access primitives
+- Encrypted legacy-plan storage and token-based access primitives
 
 Key env flags in `.env.example`:
 - `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `MODEL_ROUTER`, `EMBED_DIM`
@@ -243,7 +392,7 @@ Validate in clean venv:
 python -m venv .venv-test
 .\.venv-test\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple velocitybrain==0.1.0
+python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple velocitybrain==0.10.0
 velocitybrain about
 ```
 
@@ -287,6 +436,8 @@ Legacy commands still work:
 - `docs/SKILL_SYSTEM.md`
 - `docs/AGENT_LOOP.md`
 - `docs/WORKFLOWS.md`
+- `docs/CLIENT_INTEGRATIONS.md`
+- `docs/NEXT_LEVEL.md`
 
 ## Reference Links
 

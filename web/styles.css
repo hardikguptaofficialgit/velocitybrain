@@ -2,14 +2,16 @@
   --bg: #f5f5f5;
   --ink: #101010;
   --muted: #5b5b5b;
-  --card: rgba(255, 255, 255, 0.9);
+  --card: #ffffff;
   --card-solid: #ffffff;
   --line: rgba(16, 16, 16, 0.15);
   --line-strong: rgba(16, 16, 16, 0.28);
-  --shadow: 0 18px 40px rgba(0, 0, 0, 0.1);
-  --hero-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(237, 237, 237, 0.9));
+  --shadow: none;
+  --hero-bg: #ffffff;
   --code-bg: #111111;
   --code-ink: #f4f4f4;
+  --accent: #f58439;
+  --accent-soft: rgba(245, 132, 57, 0.12);
 
   /* ANSI logo palette (kept intentionally colored) */
   --ansi-orange: #ff9966;
@@ -21,14 +23,16 @@ body[data-theme="dark"] {
   --bg: #0f0f10;
   --ink: #f4f4f4;
   --muted: #a6a6a6;
-  --card: rgba(25, 25, 25, 0.9);
+  --card: #181818;
   --card-solid: #1a1a1a;
   --line: rgba(244, 244, 244, 0.15);
   --line-strong: rgba(244, 244, 244, 0.3);
-  --shadow: 0 22px 46px rgba(0, 0, 0, 0.55);
-  --hero-bg: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(22, 22, 22, 0.9));
+  --shadow: none;
+  --hero-bg: #181818;
   --code-bg: #080808;
   --code-ink: #f4f4f4;
+  --accent: #f7a063;
+  --accent-soft: rgba(247, 160, 99, 0.14);
 
   /* ANSI logo palette (kept intentionally colored) */
   --ansi-orange: #ff9a69;
@@ -44,28 +48,18 @@ body {
   margin: 0;
   color: var(--ink);
   font-family: "Space Grotesk", sans-serif;
-  background: radial-gradient(circle at 4% 0%, rgba(0, 0, 0, 0.05) 0%, transparent 24%),
-    radial-gradient(circle at 96% 8%, rgba(0, 0, 0, 0.04) 0%, transparent 30%), var(--bg);
-}
-
-body[data-theme="dark"] {
-  background: radial-gradient(circle at 4% 0%, rgba(255, 255, 255, 0.06) 0%, transparent 25%),
-    radial-gradient(circle at 96% 8%, rgba(255, 255, 255, 0.04) 0%, transparent 30%), var(--bg);
+  background: var(--bg);
 }
 
 .page-bg {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
+  background: var(--bg);
 }
 
 body[data-theme="dark"] .page-bg {
-  background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background: var(--bg);
 }
 
 .topbar {
@@ -77,8 +71,7 @@ body[data-theme="dark"] .page-bg {
   justify-content: space-between;
   padding: 8px 20px;
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(10px);
+  background: var(--bg);
 }
 
 .brand {
@@ -100,8 +93,8 @@ body[data-theme="dark"] .page-bg {
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  background: var(--ink);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 20%, transparent);
+  background: var(--accent);
+  box-shadow: none;
 }
 
 .topbar-actions {
@@ -144,7 +137,7 @@ body[data-theme="dark"] .page-bg {
 }
 
 .theme-toggle:hover {
-  background: color-mix(in srgb, var(--ink) 8%, var(--card-solid));
+  background: var(--accent-soft);
 }
 
 .layout {
@@ -159,8 +152,7 @@ body[data-theme="dark"] .page-bg {
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--card);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(7px);
+  box-shadow: none;
 }
 
 .sidebar {
@@ -200,7 +192,7 @@ body[data-theme="dark"] .page-bg {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px;
-  background: color-mix(in srgb, var(--card-solid) 78%, transparent);
+  background: var(--card-solid);
 }
 
 .meta-title {
@@ -225,6 +217,19 @@ body[data-theme="dark"] .page-bg {
   border-radius: 9px;
   padding: 7px 9px;
   font-size: 0.84rem;
+  background: color-mix(in srgb, var(--accent) 6%, var(--card-solid));
+}
+
+.status-item-wrap {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.status-item-wrap strong {
+  display: block;
+  text-align: left;
+  white-space: normal;
+  line-height: 1.45;
 }
 
 .status-item span {
@@ -233,6 +238,14 @@ body[data-theme="dark"] .page-bg {
 
 .status-item strong {
   color: var(--ink);
+}
+
+.status-item strong.is-stale {
+  color: #b54708;
+}
+
+body[data-theme="dark"] .status-item strong.is-stale {
+  color: #ffb36d;
 }
 
 .recent-nav {
@@ -252,7 +265,7 @@ body[data-theme="dark"] .page-bg {
 
 .recent-link:hover {
   border-color: var(--line-strong);
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  background: var(--accent-soft);
 }
 
 .doc-nav {
@@ -289,12 +302,12 @@ body[data-theme="dark"] .page-bg {
 
 .doc-link:hover {
   border-color: var(--line-strong);
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  background: var(--accent-soft);
 }
 
 .doc-link.active {
   border-color: var(--line-strong);
-  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  background: var(--accent-soft);
 }
 
 .content-panel {
@@ -309,7 +322,7 @@ body[data-theme="dark"] .page-bg {
   gap: 10px;
   align-items: center;
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--card-solid) 88%, transparent);
+  background: var(--card-solid);
   padding: 14px 18px;
 }
 
@@ -342,7 +355,6 @@ body[data-theme="dark"] .page-bg {
   font-size: clamp(0.20rem, 0.32vw, 0.35rem);
   line-height: 1.0;
   color: var(--ink);
-  text-shadow: 0 0 10px color-mix(in srgb, var(--ink) 12%, transparent);
 }
 
 .ansi-nav {
@@ -410,7 +422,7 @@ body[data-theme="dark"] .page-bg {
 }
 
 .doc-content code {
-  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-radius: 6px;
   padding: 0.12em 0.34em;
   font-family: "IBM Plex Mono", monospace;
@@ -452,7 +464,7 @@ body[data-theme="dark"] .page-bg {
 }
 
 .doc-content a {
-  color: var(--ink);
+  color: var(--accent);
   text-underline-offset: 2px;
   text-decoration-thickness: 1px;
   font-weight: 600;
@@ -502,7 +514,7 @@ body[data-theme="dark"] .page-bg {
 
 .toc-link:hover {
   color: var(--ink);
-  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  background: var(--accent-soft);
 }
 
 .toc-link.depth-3,
@@ -530,7 +542,7 @@ body[data-theme="dark"] .page-bg {
 }
 
 .page-nav-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  background: var(--accent-soft);
 }
 
 .page-nav-btn:disabled {

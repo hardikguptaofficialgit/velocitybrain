@@ -12,8 +12,16 @@ const nextPageBtn = document.getElementById('next-page');
 const ansiHero = document.getElementById('ansi-hero');
 const statusApi = document.getElementById('status-api');
 const statusPages = document.getElementById('status-pages');
+const statusRuntimeUpdated = document.getElementById('status-runtime-updated');
+const statusOpenClawCommand = document.getElementById('status-openclaw-command');
+const statusOpenClawTools = document.getElementById('status-openclaw-tools');
+const statusOpenClawSkills = document.getElementById('status-openclaw-skills');
+const statusOpenClawFlow = document.getElementById('status-openclaw-flow');
+const statusAuditCount = document.getElementById('status-audit-count');
+const statusAuditLatest = document.getElementById('status-audit-latest');
 const recentNav = document.getElementById('recent-nav');
 const copyLinkBtn = document.getElementById('copy-link');
+const STATUS_STALE_AFTER_MS = 60000;
 
 let pages = [];
 let currentSlug = '';
@@ -324,19 +332,115 @@ function renderRecentPages() {
   }
 }
 
-async function updateStatus() {
+function renderAuditLatestEvent(event) {
+  if (!event) {
+    return 'No recent audit events';
+  }
+  const parts = [event.event_type, event.actor, event.created_at].filter(Boolean);
+  return parts.length ? parts.join(' • ') : 'No recent audit events';
+}
+
+function renderRuntimeUpdated(value) {
+  if (!value) {
+    return 'Unknown';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Unknown';
+  }
+  return date.toLocaleString();
+}
+
+function runtimeStatusFreshness(value) {
+  if (!value) {
+    return { stale: true, ageMs: Number.POSITIVE_INFINITY };
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return { stale: true, ageMs: Number.POSITIVE_INFINITY };
+  }
+  const ageMs = Date.now() - date.getTime();
+  return { stale: ageMs > STATUS_STALE_AFTER_MS, ageMs };
+}
+
+function renderRuntimeAge(ageMs) {
+  if (!Number.isFinite(ageMs) || ageMs < 0) {
+    return '';
+  }
+  const seconds = Math.floor(ageMs / 1000);
+  if (seconds < 60) {
+    return `${seconds}s ago`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}m ago`;
+}
+
+async function updateRuntimeStatus() {
   if (!statusApi || !statusPages) {
     return;
   }
 
+  statusPages.textContent = String(pages.length || 0);
+
   try {
-    const health = await fetch('/v1/healthz');
-    statusApi.textContent = health.ok ? 'Online' : 'Error';
+    const response = await fetch('/v1/runtime/status?audit_limit=5');
+    if (!response.ok) {
+      throw new Error('Runtime status unavailable');
+    }
+
+    const payload = await response.json();
+    const healthOk = Boolean(payload.health && payload.health.ok);
+    statusApi.textContent = healthOk ? 'Online' : 'Degraded';
+    if (statusRuntimeUpdated) {
+      const freshness = runtimeStatusFreshness(payload.generated_at);
+      const updated = renderRuntimeUpdated(payload.generated_at);
+      const age = renderRuntimeAge(freshness.ageMs);
+      statusRuntimeUpdated.textContent = age ? `${updated} (${age})` : updated;
+      statusRuntimeUpdated.classList.toggle('is-stale', freshness.stale);
+      if (healthOk && freshness.stale) {
+        statusApi.textContent = 'Stale';
+      }
+    }
+
+    if (statusOpenClawCommand && statusOpenClawTools && statusOpenClawSkills && statusOpenClawFlow) {
+      const server = payload.openclaw && payload.openclaw.server ? payload.openclaw.server : {};
+      const cmd = [server.command, ...(Array.isArray(server.args) ? server.args : [])].filter(Boolean).join(' ');
+      statusOpenClawCommand.textContent = cmd || 'Unavailable';
+      statusOpenClawTools.textContent = String(payload.openclaw?.tool_count ?? '-');
+      statusOpenClawSkills.textContent = String(payload.openclaw?.skill_count ?? '-');
+      const flow = Array.isArray(payload.openclaw?.recommended_smoke_flow) ? payload.openclaw.recommended_smoke_flow : [];
+      statusOpenClawFlow.textContent = flow.length ? flow.join(' -> ') : 'No smoke flow configured';
+    }
+
+    if (statusAuditCount && statusAuditLatest) {
+      const audit = payload.audit || {};
+      if (audit.available === false) {
+        statusAuditCount.textContent = '-';
+        statusAuditLatest.textContent = 'Audit trail unavailable';
+      } else {
+        statusAuditCount.textContent = String(audit.count ?? 0);
+        statusAuditLatest.textContent = renderAuditLatestEvent(audit.latest_event);
+      }
+    }
   } catch (_error) {
     statusApi.textContent = 'Offline';
-  }
+    if (statusRuntimeUpdated) {
+      statusRuntimeUpdated.textContent = 'Unavailable';
+      statusRuntimeUpdated.classList.add('is-stale');
+    }
 
-  statusPages.textContent = String(pages.length || 0);
+    if (statusOpenClawCommand && statusOpenClawTools && statusOpenClawSkills && statusOpenClawFlow) {
+      statusOpenClawCommand.textContent = 'Unavailable';
+      statusOpenClawTools.textContent = '-';
+      statusOpenClawSkills.textContent = '-';
+      statusOpenClawFlow.textContent = 'OpenClaw profile unavailable';
+    }
+
+    if (statusAuditCount && statusAuditLatest) {
+      statusAuditCount.textContent = '-';
+      statusAuditLatest.textContent = 'Audit trail unavailable';
+    }
+  }
 }
 
 function bindCopyLink() {
@@ -616,7 +720,8 @@ async function boot() {
     bindSearch();
     bindPager();
     bindKeyboardShortcuts();
-    await updateStatus();
+    await updateRuntimeStatus();
+    window.setInterval(updateRuntimeStatus, 30000);
     const start = resolveStart();
     await showPage(start.slug || pages[0]?.slug || '');
     if (start.headingId) {

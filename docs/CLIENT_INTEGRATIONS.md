@@ -5,7 +5,7 @@ This guide shows how to connect Velocity Brain to MCP-capable clients and how to
 ## Integration Model
 
 - Velocity Brain runs as an MCP server process.
-- Your client CLI (Claude Code, Codex CLI, Gemini CLI, Cline) is the MCP client.
+- Your client runtime (Claude Code, Codex CLI, Gemini CLI, Cline, OpenClaw) is the MCP client.
 - The client launches `velocitybrain serve mcp` and calls tools like `query`, `ingest_text`, and `run_agent`.
 
 ## Prerequisites
@@ -83,6 +83,60 @@ Use Gemini CLI MCP config and register the same server command:
 
 Add Velocity Brain in Cline MCP settings with the same stdio command.
 
+## OpenClaw
+
+OpenClaw can use Velocity Brain through the same MCP stdio configuration.
+
+Velocity Brain also ships a ready-made OpenClaw profile export:
+
+```powershell
+velocitybrain openclaw
+```
+
+This prints a ready-to-use MCP server profile, capability summary, and the recommended smoke flow.
+
+Use this server entry in the OpenClaw MCP settings file:
+
+```json
+{
+  "mcpServers": {
+    "velocitybrain": {
+      "command": "velocitybrain",
+      "args": ["serve", "mcp"]
+    }
+  }
+}
+```
+
+If OpenClaw runs in a different shell context, set `command` to the absolute executable path.
+
+Recommended OpenClaw smoke flow:
+
+1. Call `healthz` and verify `{ "ok": true }`.
+2. Call `list_skills` and verify a non-zero `count`.
+3. Call `query` with a known entity.
+4. Call `run_agent` with a planning signal.
+
+OpenClaw can also discover the same data through the API:
+
+- `GET /v1/openclaw/profile`
+- `GET /v1/openclaw/capabilities`
+
+The guide app at `http://localhost:8080/guide` surfaces these integration checks in the sidebar:
+
+- OpenClaw command, tool count, skill count, and smoke flow
+- Recent audit event snapshot
+- Core API online/offline status
+
+## Production-Safe MCP Defaults
+
+Use these defaults when integrating any client, including OpenClaw:
+
+- Keep `MCP_ALLOW_DESTRUCTIVE_TOOLS=false` until explicitly needed.
+- Start with read-only and non-mutating tool usage (`query`, `list_skills`, `healthz`).
+- Enable destructive tools only for controlled maintenance windows.
+- Pair tool access with runtime identity and policy checks.
+
 ## Plugin Notes
 
 Velocity Brain itself already acts as the MCP plugin/tool provider. In client UIs, it appears under MCP/Plugins/Tools depending on the client terminology.
@@ -143,3 +197,11 @@ This is expected by default. Enable policy only when needed using runtime approv
 3. `velocitybrain query "What do I know about Jane Doe?"`
 4. Client MCP `healthz` call
 5. Client MCP `query` call
+
+## Go-Live Checklist
+
+1. Pin the Python environment used by your MCP client.
+2. Verify database readiness before starting MCP.
+3. Validate policy gates for destructive tools.
+4. Capture one full tool-call trace for auditability.
+5. Monitor first-run latency for `query` and `run_agent`.

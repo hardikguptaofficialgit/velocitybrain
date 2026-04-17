@@ -104,6 +104,13 @@ class EvalQueryRequest(ActorContext):
     k: int = 5
 
 
+class EvalBenchmarkCase(BaseModel):
+    question: str
+    expected_slugs: list[str] = Field(default_factory=list)
+    seed_content: str | None = None
+    source: str = 'benchmark'
+
+
 class AccessTokenRequest(BaseModel):
     actor: str
     scopes: list[str] = Field(default_factory=list)

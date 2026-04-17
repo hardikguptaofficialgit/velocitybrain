@@ -2,6 +2,7 @@ from pathlib import Path
 
 from src.core.config import settings
 from src.services.org_ingest import OrgIngestService
+from src.services.compliance_service import ComplianceService
 from src.services.policy_engine import PolicyEngine
 from src.services.sync_service import SyncService
 
@@ -13,6 +14,26 @@ def test_policy_engine_blocks_destructive_tools_by_default():
         assert False, 'expected PermissionError'
     except PermissionError:
         assert True
+
+
+def test_policy_engine_audits_blocked_destructive_tools(monkeypatch):
+    events = []
+
+    def fake_log_event(self, event_type, actor, payload):
+        events.append({'event_type': event_type, 'actor': actor, 'payload': payload})
+        return {'event_id': 1, 'event_type': event_type, 'actor': actor}
+
+    monkeypatch.setattr(ComplianceService, 'log_event', fake_log_event)
+
+    engine = PolicyEngine()
+    try:
+        engine.check_tool_call('sync_brain', {'repos': ['.']})
+    except PermissionError:
+        pass
+
+    assert events
+    assert events[0]['event_type'] == 'destructive_tool_blocked'
+    assert events[0]['payload']['tool'] == 'sync_brain'
 
 
 def test_org_parse_sections():

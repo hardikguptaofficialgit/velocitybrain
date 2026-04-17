@@ -12,6 +12,12 @@ def test_cli_has_expected_commands():
     assert args.command == 'query'
     assert args.question.startswith('what do I know')
 
+    args = parser.parse_args(['status'])
+    assert args.command == 'status'
+
+    args = parser.parse_args(['status'])
+    assert args.command == 'status'
+
 
 def test_mcp_tool_list_contains_core_tools():
     tools = VelocityBrainMCPServer()._tool_list()['tools']

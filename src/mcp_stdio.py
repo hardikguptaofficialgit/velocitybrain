@@ -1,6 +1,7 @@
 import json
 import sys
 import traceback
+import uuid
 from typing import Any
 
 from src.plugins.core_connectors import CoreConnectors
@@ -55,6 +56,14 @@ class VelocityBrainMCPServer:
 
     def _err(self, req_id: Any, code: int, message: str) -> dict[str, Any]:
         return {'jsonrpc': '2.0', 'id': req_id, 'error': {'code': code, 'message': message}}
+
+    def _trace_result(self, name: str, result: Any) -> Any:
+        if isinstance(result, dict):
+            traced = dict(result)
+            traced.setdefault('trace_id', f'{name}-{uuid.uuid4()}')
+            traced.setdefault('tool', name)
+            return traced
+        return {'result': result, 'trace_id': f'{name}-{uuid.uuid4()}', 'tool': name}
 
     def _tool_list(self) -> dict[str, Any]:
         return {
@@ -150,58 +159,58 @@ class VelocityBrainMCPServer:
             self.policy.check_tool_call(name, arguments)
 
         if name == 'ingest_text':
-            return self.memory.upsert_from_text(
+            return self._trace_result(name, self.memory.upsert_from_text(
                 source=arguments['source'],
                 content=arguments['content'],
                 access_level=arguments.get('access_level', 'private'),
-            )
+            ))
 
         if name == 'query':
             question = arguments['question']
             limit = int(arguments.get('limit', 10))
             hits = self.retrieval.hybrid_search(question, limit=limit)
             if not hits:
-                return {
+                return self._trace_result(name, {
                     'answer': 'The internal brain does not currently contain sufficient data for this question.',
                     'confidence': 0.22,
                     'references': [],
                     'reasoning_summary': 'Brain-first lookup completed with zero hits. No hallucinated answer returned.',
-                }
+                })
 
             top = hits[0]
-            return {
+            return self._trace_result(name, {
                 'answer': f"{top['title']}: {top['compiled_truth_md'][:400]}",
                 'confidence': float(top['confidence']),
                 'references': [{'type': 'entity', 'slug': h['slug'], 'title': h['title']} for h in hits],
                 'reasoning_summary': f'Hybrid retrieval returned {len(hits)} internal matches; top-ranked entity used for synthesis.',
-            }
+            })
 
         if name == 'run_agent':
-            return self.agent.run(arguments['signal'])
+            return self._trace_result(name, self.agent.run(arguments['signal']))
 
         if name == 'sync_brain':
             repos = arguments.get('repos') or []
             dry_run = bool(arguments.get('dry_run', True))
-            return self.sync.full_sync(repos=repos, dry_run=dry_run)
+            return self._trace_result(name, self.sync.full_sync(repos=repos, dry_run=dry_run))
 
         if name == 'put_page':
-            return {'status': 'blocked', 'reason': 'tool not implemented; policy gate active'}
+            return self._trace_result(name, {'status': 'blocked', 'reason': 'tool not implemented; policy gate active'})
 
         if name == 'delete_page':
-            return {'status': 'blocked', 'reason': 'tool not implemented; policy gate active'}
+            return self._trace_result(name, {'status': 'blocked', 'reason': 'tool not implemented; policy gate active'})
 
         if name == 'google_workspace_action':
-            return self.connectors.google_workspace(arguments['action'], arguments.get('payload', {}))
+            return self._trace_result(name, self.connectors.google_workspace(arguments['action'], arguments.get('payload', {})))
 
         if name == 'get_identity_spec':
-            return self.identity.get()
+            return self._trace_result(name, self.identity.get())
 
         if name == 'list_skills':
             data = self.skills.list_skills()
-            return {'count': len(data), 'skills': data}
+            return self._trace_result(name, {'count': len(data), 'skills': data})
 
         if name == 'healthz':
-            return {'ok': True, 'service': 'velocitybrain-mcp'}
+            return self._trace_result(name, {'ok': True, 'service': 'velocitybrain-mcp'})
 
         raise ValueError(f'unknown tool: {name}')
 
