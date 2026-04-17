@@ -24,12 +24,10 @@
     <!-- Topbar -->
     <header class="topbar">
       <div class="brand">
-        <span class="brand-dot"></span>
-        <span class="brand-text">Velocity Brain</span>
+        <pre id="ansi-hero" class="ansi-hero ansi-nav" aria-hidden="true"></pre>
       </div>
 
       <div class="topbar-actions">
-        <span class="topbar-meta">/ search · [ prev · ] next · T theme</span>
         <button id="copy-link" class="topbar-btn" aria-label="Copy deep link">Copy Link</button>
 
         <button
@@ -105,11 +103,6 @@
           </div>
         </div>
 
-        <section class="hero-panel" aria-label="Velocity Brain banner">
-          <pre id="ansi-hero" class="ansi-hero" aria-hidden="true"></pre>
-          <p class="hero-caption">The guide uses the same banner language as the terminal about experience.</p>
-        </section>
-
         <!-- Body -->
         <div class="content-body">
           <!-- Main doc -->
@@ -152,6 +145,8 @@
     </main>
 
     <!-- Script -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
     <script src="/guide/static/app.js"></script>
   </body>
 </html>

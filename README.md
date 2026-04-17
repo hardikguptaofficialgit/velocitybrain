@@ -1,7 +1,7 @@
 # Velocity Brain
 
 <p align="center">
-  <img src="docs/assets/velocity-brain-logo.svg" alt="Velocity Brain logo" width="760" />
+  <img src="/guide/static/assets/velocity-brain-logo.svg" alt="Velocity Brain logo" width="760" />
 </p>
 
 <p align="center">

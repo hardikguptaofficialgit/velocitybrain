@@ -31,6 +31,10 @@ DOC_PAGE_MAP: dict[str, tuple[str, str, Path]] = {
 if WEB_ROOT.exists():
     app.mount('/guide/static', StaticFiles(directory=str(WEB_ROOT)), name='guide-static')
 
+ASSETS_ROOT = Path('docs/assets').resolve()
+if ASSETS_ROOT.exists():
+    app.mount('/guide/static/assets', StaticFiles(directory=str(ASSETS_ROOT)), name='docs-assets')
+
 
 @app.on_event('startup')
 def _startup():

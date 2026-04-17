@@ -10,10 +10,15 @@ const themeToggle = document.getElementById('theme-toggle');
 const prevPageBtn = document.getElementById('prev-page');
 const nextPageBtn = document.getElementById('next-page');
 const ansiHero = document.getElementById('ansi-hero');
+const statusApi = document.getElementById('status-api');
+const statusPages = document.getElementById('status-pages');
+const recentNav = document.getElementById('recent-nav');
+const copyLinkBtn = document.getElementById('copy-link');
 
 let pages = [];
 let currentSlug = '';
 const pageIndex = new Map();
+const RECENT_KEY = 'velocitybrain-guide-recent';
 
 const ANSI_BANNER_LINES = [
   '██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗',
@@ -38,15 +43,6 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
-}
-
-function parseInline(text) {
-  let out = escapeHtml(text);
-  out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
-  out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  out = out.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-  return out;
 }
 
 function slugify(text) {
@@ -108,7 +104,7 @@ function renderAnsiBanner() {
   });
 }
 
-function markdownToHtml(md) {
+function fallbackMarkdownToHtml(md) {
   const lines = md.replaceAll('\r\n', '\n').split('\n');
   const html = [];
   const toc = [];
@@ -155,7 +151,7 @@ function markdownToHtml(md) {
       const text = heading[2].trim();
       const id = slugify(text) || `section-${toc.length + 1}`;
       toc.push({ id, text, level });
-      html.push(`<h${level} id="${id}">${parseInline(text)}</h${level}>`);
+      html.push(`<h${level} id="${id}">${escapeHtml(text)}</h${level}>`);
       continue;
     }
 
@@ -166,7 +162,7 @@ function markdownToHtml(md) {
         listType = 'ol';
         html.push('<ol>');
       }
-      html.push(`<li>${parseInline(orderedItem[1])}</li>`);
+      html.push(`<li>${escapeHtml(orderedItem[1])}</li>`);
       continue;
     }
 
@@ -177,16 +173,61 @@ function markdownToHtml(md) {
         listType = 'ul';
         html.push('<ul>');
       }
-      html.push(`<li>${parseInline(bulletItem[1])}</li>`);
+      html.push(`<li>${escapeHtml(bulletItem[1])}</li>`);
       continue;
     }
 
     closeList();
-    html.push(`<p>${parseInline(line)}</p>`);
+    html.push(`<p>${escapeHtml(line)}</p>`);
   }
 
   closeList();
   return { html: html.join('\n'), toc };
+}
+
+function markdownToHtml(md) {
+  const source = md || '';
+  if (!window.marked) {
+    return fallbackMarkdownToHtml(source);
+  }
+
+  marked.setOptions({
+    gfm: true,
+    breaks: false,
+    mangle: false,
+    headerIds: false,
+  });
+
+  const raw = marked.parse(source);
+  const safe = window.DOMPurify ? window.DOMPurify.sanitize(raw) : raw;
+
+  const container = document.createElement('div');
+  container.innerHTML = safe;
+  const toc = [];
+  for (const heading of container.querySelectorAll('h1, h2, h3, h4, h5, h6')) {
+    const level = Number(heading.tagName.slice(1));
+    const text = heading.textContent?.trim() || '';
+    const id = slugify(text) || `section-${toc.length + 1}`;
+    heading.id = id;
+    toc.push({ id, text, level });
+  }
+
+  for (const link of container.querySelectorAll('a')) {
+    const href = link.getAttribute('href') || '';
+    if (/^https?:\/\//i.test(href)) {
+      link.setAttribute('target', '_blank');
+      link.setAttribute('rel', 'noopener noreferrer');
+      for (const img of container.querySelectorAll('img')) {
+        const src = img.getAttribute('src') || '';
+        if (src.startsWith('docs/assets/')) {
+          img.setAttribute('src', '/guide/static/assets/' + src.replace('docs/assets/', ''));
+        }
+      }
+
+    }
+  }
+
+  return { html: container.innerHTML, toc };
 }
 
 function highlightCodeBlocks() {
@@ -242,6 +283,81 @@ function groupPages(items) {
     grouped.get(key).push(page);
   }
   return grouped;
+}
+
+function saveRecentSlug(slug) {
+  if (!slug) {
+    return;
+  }
+  const existing = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+  const next = [slug, ...existing.filter((value) => value !== slug)].slice(0, 6);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  renderRecentPages();
+}
+
+function renderRecentPages() {
+  if (!recentNav) {
+    return;
+  }
+  const saved = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+  const recentPages = saved
+    .map((slug) => pages.find((page) => page.slug === slug))
+    .filter((page) => Boolean(page));
+
+  if (!recentPages.length) {
+    recentNav.innerHTML = '<p class="empty-state">No recent pages yet.</p>';
+    return;
+  }
+
+  recentNav.innerHTML = recentPages
+    .map((page) => `<a class="recent-link" href="#${page.slug}" data-slug="${page.slug}">${escapeHtml(page.title)}</a>`)
+    .join('');
+
+  for (const link of recentNav.querySelectorAll('.recent-link')) {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      window.location.hash = event.currentTarget.getAttribute('data-slug');
+      if (window.innerWidth <= 920) {
+        sidebar.classList.remove('open');
+      }
+    });
+  }
+}
+
+async function updateStatus() {
+  if (!statusApi || !statusPages) {
+    return;
+  }
+
+  try {
+    const health = await fetch('/v1/healthz');
+    statusApi.textContent = health.ok ? 'Online' : 'Error';
+  } catch (_error) {
+    statusApi.textContent = 'Offline';
+  }
+
+  statusPages.textContent = String(pages.length || 0);
+}
+
+function bindCopyLink() {
+  if (!copyLinkBtn) {
+    return;
+  }
+  copyLinkBtn.addEventListener('click', async () => {
+    const link = `${window.location.origin}${window.location.pathname}${window.location.hash || `#${currentSlug}`}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      copyLinkBtn.textContent = 'Copied';
+      setTimeout(() => {
+        copyLinkBtn.textContent = 'Copy Link';
+      }, 1000);
+    } catch (_error) {
+      copyLinkBtn.textContent = 'Failed';
+      setTimeout(() => {
+        copyLinkBtn.textContent = 'Copy Link';
+      }, 1000);
+    }
+  });
 }
 
 function attachCopyButtons() {
@@ -341,6 +457,7 @@ async function showPage(slug) {
     pageIndex.set(target.slug, page);
   }
   currentSlug = target.slug;
+  saveRecentSlug(currentSlug);
   pageTitle.textContent = page.title;
   pagePath.textContent = page.path;
   const rendered = markdownToHtml(page.markdown || '');
@@ -493,10 +610,13 @@ async function boot() {
   try {
     renderAnsiBanner();
     await loadPages();
+    renderRecentPages();
+    bindCopyLink();
     bindTheme();
     bindSearch();
     bindPager();
     bindKeyboardShortcuts();
+    await updateStatus();
     const start = resolveStart();
     await showPage(start.slug || pages[0]?.slug || '');
     if (start.headingId) {

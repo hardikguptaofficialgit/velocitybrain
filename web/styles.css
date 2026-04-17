@@ -75,7 +75,7 @@ body[data-theme="dark"] .page-bg {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 8px 20px;
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(10px);
@@ -87,10 +87,13 @@ body[data-theme="dark"] .page-bg {
   gap: 10px;
   font-weight: 700;
   letter-spacing: 0.02em;
+  min-width: 0;
+  flex: 1;
 }
 
 .brand-text {
   color: var(--ink);
+  white-space: nowrap;
 }
 
 .brand-dot {
@@ -332,23 +335,22 @@ body[data-theme="dark"] .page-bg {
   cursor: pointer;
 }
 
-.hero-panel {
-  margin: 16px 16px 0;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 14px 14px 8px;
-  background: var(--hero-bg);
-}
-
 .ansi-hero {
   margin: 0;
   overflow: auto;
-  padding-bottom: 6px;
   font-family: "IBM Plex Mono", monospace;
-  font-size: clamp(0.34rem, 0.65vw, 0.64rem);
-  line-height: 1.05;
+  font-size: clamp(0.20rem, 0.32vw, 0.35rem);
+  line-height: 1.0;
   color: var(--ink);
   text-shadow: 0 0 10px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.ansi-nav {
+  max-width: 100%;
+  max-height: none;
+  overflow: visible;
+  border-left: none;
+  padding-left: 0;
 }
 
 .ansi-line {
@@ -379,17 +381,9 @@ body[data-theme="dark"] .page-bg {
   color: var(--ansi-white);
 }
 
-.hero-caption {
-  margin: 8px 0 2px;
-  color: var(--muted);
-  font-size: 0.84rem;
-}
-
 .content-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 250px;
-  border-top: 1px solid var(--line);
-  margin-top: 14px;
   min-height: 0;
   flex: 1;
 }
@@ -597,12 +591,12 @@ body[data-theme="dark"] .page-bg {
     display: none;
   }
 
-  .topbar-btn {
-    display: none;
+  .ansi-nav {
+    max-width: 100%;
   }
 
-  .hero-panel {
-    margin-top: 10px;
+  .topbar-btn {
+    display: none;
   }
 
   .doc-content {
