@@ -55,6 +55,7 @@ def openclaw_capabilities():
         'tool_count': capabilities['tool_count'],
         'skill_count': capabilities['skill_count'],
         'skill_categories': capabilities['skill_categories'],
+        'response_styles': capabilities.get('response_styles', ['normal']),
         'recommended_smoke_flow': profile['recommended_smoke_flow'],
         'trace_id': f'openclaw-{uuid.uuid4()}',
     }

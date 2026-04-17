@@ -10,6 +10,7 @@ from src.services.identity_spec import IdentitySpecService
 from src.services.memory_engine import MemoryEngine
 from src.services.policy_engine import PolicyEngine
 from src.services.retrieval_engine import RetrievalEngine
+from src.services.response_style import ALLOWED_RESPONSE_STYLES, apply_response_style
 from src.services.skill_registry import SkillRegistry
 from src.services.sync_service import SyncService
 
@@ -89,6 +90,7 @@ class VelocityBrainMCPServer:
                         'properties': {
                             'question': {'type': 'string'},
                             'limit': {'type': 'integer'},
+                            'response_style': {'type': 'string', 'enum': sorted(ALLOWED_RESPONSE_STYLES)},
                         },
                         'required': ['question'],
                     },
@@ -98,7 +100,10 @@ class VelocityBrainMCPServer:
                     'description': 'Run the detect->retrieve->reason->execute loop.',
                     'inputSchema': {
                         'type': 'object',
-                        'properties': {'signal': {'type': 'string'}},
+                        'properties': {
+                            'signal': {'type': 'string'},
+                            'response_style': {'type': 'string', 'enum': sorted(ALLOWED_RESPONSE_STYLES)},
+                        },
                         'required': ['signal'],
                     },
                 },
@@ -168,25 +173,28 @@ class VelocityBrainMCPServer:
         if name == 'query':
             question = arguments['question']
             limit = int(arguments.get('limit', 10))
+            response_style = arguments.get('response_style', 'normal')
             hits = self.retrieval.hybrid_search(question, limit=limit)
             if not hits:
-                return self._trace_result(name, {
+                return self._trace_result(name, apply_response_style({
                     'answer': 'The internal brain does not currently contain sufficient data for this question.',
                     'confidence': 0.22,
                     'references': [],
                     'reasoning_summary': 'Brain-first lookup completed with zero hits. No hallucinated answer returned.',
-                })
+                }, response_style))
 
             top = hits[0]
-            return self._trace_result(name, {
+            return self._trace_result(name, apply_response_style({
                 'answer': f"{top['title']}: {top['compiled_truth_md'][:400]}",
                 'confidence': float(top['confidence']),
                 'references': [{'type': 'entity', 'slug': h['slug'], 'title': h['title']} for h in hits],
                 'reasoning_summary': f'Hybrid retrieval returned {len(hits)} internal matches; top-ranked entity used for synthesis.',
-            })
+            }, response_style))
 
         if name == 'run_agent':
-            return self._trace_result(name, self.agent.run(arguments['signal']))
+            output = self.agent.run(arguments['signal'])
+            response_style = arguments.get('response_style', 'normal')
+            return self._trace_result(name, apply_response_style(output, response_style))
 
         if name == 'sync_brain':
             repos = arguments.get('repos') or []

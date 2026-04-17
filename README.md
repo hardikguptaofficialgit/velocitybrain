@@ -1,5 +1,5 @@
 ﻿<p align="center">
-  <img src="/guide/static/assets/velocity-brain-logo.svg" alt="Velocity Brain logo" width="600" />
+  <img src="https://raw.githubusercontent.com/hardikguptaofficialgit/velocitybrain/2555e6ca7880bf9e1ab291d2253ac3b23b115e82/docs/assets/velocity-brain-logo.svg" alt="Velocity Brain logo" width="600" />
 </p>
 
 <p align="center">
@@ -270,6 +270,25 @@ codex mcp add velocitybrain -- velocitybrain serve mcp
 
 - OpenClaw / Gemini CLI / Cline / Antigravity / any MCP-capable client:
 Use the same `mcpServers` JSON config in that client's MCP settings.
+
+Turnkey setup assets are available in:
+
+- `integrations/mcp/claude-code/mcpServers.velocitybrain.json`
+- `integrations/mcp/openclaw/mcpServers.velocitybrain.json`
+- `scripts/setup_mcp_plugin.ps1`
+
+One-command plugin setup:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup_mcp_plugin.ps1 -Client claude
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup_mcp_plugin.ps1 -Client openclaw
+```
+
+If `velocitybrain` is not on PATH, resolve to absolute executable path:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup_mcp_plugin.ps1 -Client claude -UseAbsoluteCommandPath
+```
 
 Available MCP tools:
 - `ingest_text`

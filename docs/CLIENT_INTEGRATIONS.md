@@ -30,6 +30,12 @@ C:/Path/To/venv/Scripts/velocitybrain.exe serve mcp
 
 ## Claude Code CLI
 
+### One-command setup
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup_mcp_plugin.ps1 -Client claude
+```
+
 ### Add server
 
 ```powershell
@@ -87,6 +93,16 @@ Add Velocity Brain in Cline MCP settings with the same stdio command.
 
 OpenClaw can use Velocity Brain through the same MCP stdio configuration.
 
+### One-command setup
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup_mcp_plugin.ps1 -Client openclaw
+```
+
+Default OpenClaw output path:
+
+- `~/.openclaw/mcp.json`
+
 Velocity Brain also ships a ready-made OpenClaw profile export:
 
 ```powershell
@@ -109,6 +125,12 @@ Use this server entry in the OpenClaw MCP settings file:
 ```
 
 If OpenClaw runs in a different shell context, set `command` to the absolute executable path.
+
+Absolute command setup for either client:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup_mcp_plugin.ps1 -Client claude -UseAbsoluteCommandPath
+```
 
 Recommended OpenClaw smoke flow:
 
@@ -197,6 +219,21 @@ This is expected by default. Enable policy only when needed using runtime approv
 3. `velocitybrain query "What do I know about Jane Doe?"`
 4. Client MCP `healthz` call
 5. Client MCP `query` call
+
+## Automated Plugin Verification
+
+Run a single verifier for Claude Code and OpenClaw integration checks:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify_mcp_integrations.ps1
+```
+
+This validates:
+
+- MCP protocol initialize + `tools/list`
+- MCP `healthz` tool call
+- Claude registration if Claude CLI is installed
+- OpenClaw config entry presence
 
 ## Go-Live Checklist
 

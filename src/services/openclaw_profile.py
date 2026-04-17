@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from src.services.response_style import ALLOWED_RESPONSE_STYLES
 from src.services.skill_registry import SkillRegistry
 
 
@@ -34,6 +35,7 @@ def build_openclaw_profile() -> dict:
             'tools': tool_names,
             'skill_count': len(skills),
             'skill_categories': sorted({skill.get('category', 'uncategorized') for skill in skills}),
+            'response_styles': sorted(ALLOWED_RESPONSE_STYLES),
         },
         'recommended_smoke_flow': [
             'healthz',

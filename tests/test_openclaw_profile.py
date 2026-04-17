@@ -34,4 +34,6 @@ def test_openclaw_capabilities_endpoint_returns_summary():
     assert payload['name'] == 'velocitybrain'
     assert payload['client'] == 'openclaw'
     assert payload['tool_count'] >= 10
+    assert 'response_styles' in payload
+    assert 'full' in payload['response_styles']
     assert 'trace_id' in payload

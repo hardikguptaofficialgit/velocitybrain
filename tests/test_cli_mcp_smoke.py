@@ -15,6 +15,9 @@ def test_cli_has_expected_commands():
     args = parser.parse_args(['status'])
     assert args.command == 'status'
 
+    args = parser.parse_args(['--response-style', 'full', 'query', 'what do I know about Jane Doe?'])
+    assert args.response_style == 'full'
+
     args = parser.parse_args(['status'])
     assert args.command == 'status'
 
@@ -28,6 +31,11 @@ def test_mcp_tool_list_contains_core_tools():
     assert 'run_agent' in names
     assert 'list_skills' in names
     assert 'healthz' in names
+
+    query_tool = next(tool for tool in tools if tool['name'] == 'query')
+    run_tool = next(tool for tool in tools if tool['name'] == 'run_agent')
+    assert 'response_style' in query_tool['inputSchema']['properties']
+    assert 'response_style' in run_tool['inputSchema']['properties']
 
 def test_mcp_policy_blocks_destructive_calls():
     server = VelocityBrainMCPServer()

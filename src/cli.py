@@ -13,6 +13,7 @@ from src.services.identity_spec import IdentitySpecService
 from src.services.memory_engine import MemoryEngine
 from src.services.openclaw_profile import build_openclaw_profile
 from src.services.org_ingest import OrgIngestService
+from src.services.response_style import ALLOWED_RESPONSE_STYLES, apply_response_style, normalize_response_style
 from src.services.retrieval_engine import RetrievalEngine
 from src.services.runtime_status import build_runtime_status
 from src.services.skill_registry import SkillRegistry
@@ -384,11 +385,11 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     return 0
 
 
-def _query_payload(question: str, limit: int) -> dict[str, Any]:
+def _query_payload(question: str, limit: int, response_style: str = 'normal') -> dict[str, Any]:
     try:
         hits = RetrievalEngine().hybrid_search(question, limit=limit)
     except Exception as exc:
-        return {
+        return apply_response_style({
             'answer': 'Query failed because the local database is not ready.',
             'confidence': 0.0,
             'references': [],
@@ -397,28 +398,28 @@ def _query_payload(question: str, limit: int) -> dict[str, Any]:
                 f'DATABASE_URL check failed. error={exc}'
             ),
             'error': 'database_unavailable',
-        }
+        }, response_style)
     if not hits:
-        return {
+        return apply_response_style({
             'answer': 'The internal brain does not currently contain sufficient data for this question.',
             'confidence': 0.22,
             'references': [],
             'reasoning_summary': 'Brain-first lookup completed with zero hits. No hallucinated answer returned.',
             'trace_id': f'query-{limit}',
-        }
+        }, response_style)
 
     top = hits[0]
-    return {
+    return apply_response_style({
         'answer': f"{top['title']}: {top['compiled_truth_md'][:400]}",
         'confidence': float(top['confidence']),
         'references': [{'type': 'entity', 'slug': h['slug'], 'title': h['title']} for h in hits],
         'reasoning_summary': f'Hybrid retrieval returned {len(hits)} internal matches; top-ranked entity used for synthesis.',
         'trace_id': f'query-{limit}-{len(hits)}',
-    }
+    }, response_style)
 
 
 def cmd_query(args: argparse.Namespace) -> int:
-    payload = _query_payload(args.question, args.limit)
+    payload = _query_payload(args.question, args.limit, response_style=args.response_style)
     payload['_color'] = _use_color(args)
     _emit(args, payload, _render_query)
     return 0
@@ -447,6 +448,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             'error': 'runtime_unavailable',
             'trace_id': f'run-failed-{args.signal[:20]}',
         }
+    payload = apply_response_style(payload, args.response_style)
     payload['_color'] = _use_color(args)
     _emit(args, payload, _render_run)
     return 0 if payload.get('status') != 'failed' else 1
@@ -571,6 +573,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--json', action='store_true', help='Output machine-readable JSON.')
     parser.add_argument('--color', action='store_true', help='Force ANSI color output.')
     parser.add_argument('--no-color', action='store_true', help='Disable ANSI colors and styling.')
+    parser.add_argument(
+        '--response-style',
+        choices=sorted(ALLOWED_RESPONSE_STYLES),
+        default=normalize_response_style(os.getenv('VB_RESPONSE_STYLE', 'normal')),
+        help='Response style for query/run outputs (normal, lite, full).',
+    )
 
     sub = parser.add_subparsers(dest='command', required=True)
 
