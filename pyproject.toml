@@ -3,24 +3,45 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "velocitybrain"
-version = "0.10.0"
-description = "Velocity Brain: agent-first memory and execution engine"
+name = "velocitybrain-client"
+version = "1.0.0"
+description = "Open-source CLI, SDK, and MCP bridge for the hosted VelocityBrain coding-agent reuse API"
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "VelocityBrain Team", email = "team@velocitybrain.ai"}]
+keywords = ["ai", "agents", "memory", "reuse", "llm", "mcp"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
 dependencies = [
-  "fastapi==0.116.1",
-  "uvicorn[standard]==0.35.0",
-  "psycopg[binary]==3.2.9",
-  "pydantic==2.11.7",
-  "python-dotenv==1.1.1",
-  "apscheduler==3.11.0",
-  "pgvector==0.3.6"
+  "requests>=2.31.0",
+  "mcp>=1.0.0",
+  "PyJWT>=2.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0.0",
 ]
 
 [project.scripts]
-velocitybrain = "src.cli:main"
-velocityx = "src.cli:main"
+velocitybrain = "velocitybrain_client.cli.main:main"
+velocitybrain-mcp = "velocitybrain_client.mcp.server:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
-include = ["src*"]
+where = ["src"]
+include = ["velocitybrain_client*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v"

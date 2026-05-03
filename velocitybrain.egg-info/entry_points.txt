@@ -1,3 +1,0 @@
-[console_scripts]
-velocitybrain = src.cli:main
-velocityx = src.cli:main

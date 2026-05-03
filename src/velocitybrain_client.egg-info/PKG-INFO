@@ -1,0 +1,88 @@
+Metadata-Version: 2.4
+Name: velocitybrain-client
+Version: 1.0.0
+Summary: Open-source CLI, SDK, and MCP bridge for the hosted VelocityBrain coding-agent reuse API
+Author-email: VelocityBrain Team <team@velocitybrain.ai>
+License-Expression: MIT
+Keywords: ai,agents,memory,reuse,llm,mcp
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.31.0
+Requires-Dist: mcp>=1.0.0
+Requires-Dist: PyJWT>=2.8.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Dynamic: license-file
+
+# VelocityBrain Client
+
+Open-source CLI, SDK, and MCP bridge for the hosted VelocityBrain coding-agent reuse API.
+
+## What Is Public
+
+This repository contains only the distribution layer:
+
+- Python SDK
+- hosted-only CLI
+- MCP bridge
+- integrations
+- examples
+- minimal docs
+
+It does not contain the hosted reuse engine, ranking logic, savings logic, backend, or dashboard.
+
+## Install
+
+```bash
+pip install velocitybrain-client
+```
+
+## Configure
+
+```bash
+export VELOCITYBRAIN_API_KEY="vb_live_xxx"
+```
+
+## CLI
+
+```bash
+velocitybrain run "Which files should I edit to change hosted auth safely?"
+velocitybrain status
+```
+
+## Python
+
+```python
+from velocitybrain_client import VelocityBrainClient
+
+with VelocityBrainClient(api_key="vb_live_xxx") as client:
+    result = client.run("Map the hosted auth and API key flow in this repo.")
+    print(result)
+```
+
+## MCP
+
+```bash
+velocitybrain-mcp
+```
+
+## API Surface
+
+The public client only calls these hosted endpoints:
+
+- `POST /v1/run`
+- `GET /v1/usage`
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+pytest
+python scripts/check_public_boundary.py
+```
