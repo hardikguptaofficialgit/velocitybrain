@@ -1,3 +1,0 @@
-[console_scripts]
-velocitybrain = src.cli.main:main
-velocitybrain-mcp = src.mcp.server:main

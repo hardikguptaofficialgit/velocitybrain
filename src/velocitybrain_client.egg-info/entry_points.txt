@@ -1,3 +1,0 @@
-[console_scripts]
-velocitybrain = velocitybrain_client.cli.main:main
-velocitybrain-mcp = velocitybrain_client.mcp.server:main
